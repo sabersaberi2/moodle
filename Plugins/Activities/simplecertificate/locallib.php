@@ -2442,11 +2442,15 @@ class simplecertificate {
      */
     private function add_to_log($action) {
         if ($action) {
+            // مهدی آنیلی {
+            $issued_certificate = $this->get_issue(null,false);
+            $issued_certificate_code = isset($issued_certificate->code) ? $issued_certificate->code : '';
+            // } مهدی آنیلی
                 $event = \mod_simplecertificate\event\course_module_viewed::create(
                        array(
                             'objectid' => $this->get_course_module()->instance,
                             'context' => $this->get_context(),
-                            'other' => array('certificatecode' => $this->get_issue()->code)));
+                            'other' => array('certificatecode' => $issued_certificate_code))); // مهدی آنیلی
                        $event->add_record_snapshot('course', $this->get_course());
         }
 

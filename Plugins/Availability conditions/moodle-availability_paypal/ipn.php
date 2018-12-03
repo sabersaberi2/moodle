@@ -38,7 +38,7 @@ require_once($CFG->libdir . '/filelib.php');
 set_exception_handler('availability_paypal_ipn_exception_handler');
 
 // Keep out casual intruders.
-if (empty($_POST) or !empty($_GET)) {
+if (!isset($_GET['Status'],$_GET['Authority'],$_GET['custom'],$_GET['user'],$_GET['amount'])) {
     print_error("Sorry, you can not use the script that way.");
 }
 
@@ -54,29 +54,14 @@ foreach ($_POST as $key => $value) {
 }
 
 $data = new stdclass();
-$data->business             = optional_param('business', '', PARAM_TEXT);
-$data->receiver_email       = optional_param('receiver_email', '', PARAM_TEXT);
-$data->receiver_id          = optional_param('receiver_id', '', PARAM_TEXT);
-$data->item_name            = optional_param('item_name', '', PARAM_TEXT);
-$data->memo                 = optional_param('memo', '', PARAM_TEXT);
-$data->tax                  = optional_param('tax', '', PARAM_TEXT);
-$data->option_name1         = optional_param('option_name1', '', PARAM_TEXT);
-$data->option_selection1_x  = optional_param('option_selection1_x', '', PARAM_TEXT);
-$data->option_name2         = optional_param('option_name2', '', PARAM_TEXT);
-$data->option_selection2_x  = optional_param('option_selection2_x', '', PARAM_TEXT);
-$data->payment_status       = optional_param('payment_status', '', PARAM_TEXT);
-$data->pending_reason       = optional_param('pending_reason', '', PARAM_TEXT);
-$data->reason_code          = optional_param('reason_code', '', PARAM_TEXT);
-$data->txn_id               = optional_param('txn_id', '', PARAM_TEXT);
-$data->parent_txn_id        = optional_param('parent_txn_id', '', PARAM_TEXT);
-$data->payment_type         = optional_param('payment_type', '', PARAM_TEXT);
-$data->payment_gross        = optional_param('mc_gross', '', PARAM_TEXT);
-$data->payment_currency     = optional_param('mc_currency', '', PARAM_TEXT);
-$custom = optional_param('custom', '', PARAM_TEXT);
-$custom = explode('-', $custom);
-$data->userid           = (int)$custom[0];
-$data->contextid       = (int)$custom[1];
-$data->timeupdated      = time();
+$data->payment_status       = $_GET['Status'];;
+$data->txn_id               = $_GET['Authority'];
+$data->payment_gross        = $_GET['amount'];
+$custom                     = $_GET['custom'];
+$custom                     = explode('-', $custom);
+$data->userid               = (int)$custom[0];
+$data->contextid            = (int)$custom[1];
+$data->timeupdated          = time();
 
 if (! $user = $DB->get_record("user", array("id" => $data->userid))) {
     availability_paypal_message_error_to_admin("Not a valid user id", $data);
@@ -106,192 +91,88 @@ if ($context instanceof context_module) {
     print_error('support to sections not yet implemented.');
 }
 
-// Open a connection back to PayPal to validate the data.
-$paypaladdr = empty($CFG->usepaypalsandbox) ? 'www.paypal.com' : 'www.sandbox.paypal.com';
-$c = new curl();
-$options = array(
-    'returntransfer' => true,
-    'httpheader' => array('application/x-www-form-urlencoded', "Host: $paypaladdr"),
-    'timeout' => 30,
-    'CURLOPT_HTTP_VERSION' => CURL_HTTP_VERSION_1_1,
-);
-$location = "https://{$paypaladdr}/cgi-bin/webscr";
-$result = $c->post($location, $req, $options);
-
-if (!$result) {  // Could not connect to PayPal - FAIL.
-    echo "<p>Error: could not access paypal.com</p>";
-    availability_paypal_message_error_to_admin("Could not access paypal.com to verify payment", $data);
-    die;
+$result = false;
+$err = '';
+if($_GET['Status'] != 'OK')
+{
+	$err = 'پرداخت لغو شد';
 }
-
-// Connection is OK, so now we post the data to validate it.
-
-// Now read the response and check if everything is OK.
-
-if (strlen($result) > 0) {
-    if (strcmp($result, "VERIFIED") == 0) {          // VALID PAYMENT!
-
-        $DB->insert_record("availability_paypal_tnx", $data);
-
-        // Check the payment_status and payment_reason.
-
-        // If status is not completed, just tell admin, transaction will be saved later.
-        if ($data->payment_status != "Completed" and $data->payment_status != "Pending") {
-            availability_paypal_message_error_to_admin("Status not completed or pending. User payment status updated", $data);
-        }
-
-        // If currency is incorrectly set then someone maybe trying to cheat the system.
-        if ($data->payment_currency != $paypal->currency) {
-            availability_paypal_message_error_to_admin("Currency does not match course settings, received: ".$data->payment_currency, $data);
-            die;
-        }
-
-        // If status is pending and reason is other than echeck,
-        // then we are on hold until further notice.
-        // Email user to let them know. Email admin.
-        if ($data->payment_status == "Pending" and $data->pending_reason != "echeck") {
-
-            $eventdata = new \core\message\message();
-            $eventdata->component         = 'availability_paypal';
-            $eventdata->name              = 'payment_pending';
-            $eventdata->userfrom          = get_admin();
-            $eventdata->userto            = $user;
-            $eventdata->subject           = get_string("paypalpaymentpendingsubject", 'availability_paypal');
-            $eventdata->fullmessage       = get_string('paypalpaymentpendingmessage', 'availability_paypal');
-            $eventdata->fullmessageformat = FORMAT_PLAIN;
-            $eventdata->fullmessagehtml   = '';
-            $eventdata->smallmessage      = '';
-            message_send($eventdata);
-        }
-
-        // If our status is not completed or not pending on an echeck clearance then ignore and die.
-        // This check is redundant at present but may be useful if paypal extend the return codes in the future.
-        if (! ( $data->payment_status == "Completed" or
-               ($data->payment_status == "Pending" and $data->pending_reason == "echeck") ) ) {
-            die;
-        }
-
-        // At this point we only proceed with a status of completed or pending with a reason of echeck.
-
-        // Make sure this transaction doesn't exist already.
-        if ($existing = $DB->get_record("availability_paypal_tnx", array("txn_id" => $data->txn_id))) {
-            availability_paypal_message_error_to_admin("Transaction $data->txn_id is being repeated!", $data);
-            die;
-        }
-
-        // Check that the email is the one we want it to be.
-        if (core_text::strtolower($data->business) !== core_text::strtolower($paypal->businessemail)) {
-            availability_paypal_message_error_to_admin("Business email is {$data->business} (not ".
-                                            $paypal->businessemail.")", $data);
-            die;
-        }
-
-        // Check that user exists.
-        if (!$user = $DB->get_record('user', array('id' => $data->userid))) {
-            availability_paypal_message_error_to_admin("User {$data->userid} doesn't exist", $data);
-            die;
-        }
-
-        // Check that course exists.
-        if (!$course = $DB->get_record('course', array('id' => $data->courseid))) {
-            availability_paypal_message_error_to_admin("Course {$data->courseid} doesn't exist", $data);
-            die;
-        }
-
-        $coursecontext = context_course::instance($course->id, IGNORE_MISSING);
-
-        // Check that amount paid is the correct amount.
-        if ( (float) $paypal->cost < 0 ) {
-            $cost = (float) 0;
-        } else {
-            $cost = (float) $paypal->cost;
-        }
-
-        // Use the same rounding of floats as on the plugin form.
-        $cost = format_float($cost, 2, false);
-
-        if ($data->payment_gross < $cost) {
-            availability_paypal_message_error_to_admin("Amount paid is not enough ({$data->payment_gross} < {$cost}))", $data);
-            die;
-        }
-
-        // All clear!
-
-        // Pass $view=true to filter hidden caps if the user cannot see them.
-        if ($users = get_users_by_capability($context, 'moodle/course:update', 'u.*', 'u.id ASC',
-                                             '', '', '', '', false, true)) {
-            $users = sort_by_roleassignment_authority($users, $context);
-            $teacher = array_shift($users);
-        } else {
-            $teacher = false;
-        }
-
-        /*
-        $mailstudents = $paypal->mailstudents;
-        $mailteachers = $paypal->mailteachers;
-        $mailadmins   = $paypal->mailadmins;
-        $shortname = format_string($course->shortname, true, array('context' => $context));
-
-        if (!empty($mailstudents)) {
-            $a = new stdClass();
-            $a->coursename = format_string($course->fullname, true, array('context' => $coursecontext));
-            $a->profileurl = "$CFG->wwwroot/user/view.php?id=$user->id";
-
-            $eventdata = new \core\message\message();
-            $eventdata->component         = 'availability_paypal';
-            $eventdata->name              = 'payment_completed';
-            $eventdata->userfrom          = empty($teacher) ? core_user::get_support_user() : $teacher;
-            $eventdata->userto            = $user;
-            $eventdata->subject           = get_string("paypalpaymentcompletedsubject", 'paypal');
-            $eventdata->fullmessage       = get_string('paypalpaymentcompletedmessage', 'paypal');
-            $eventdata->fullmessageformat = FORMAT_PLAIN;
-            $eventdata->fullmessagehtml   = '';
-            $eventdata->smallmessage      = '';
-            message_send($eventdata);
-        }
-
-        if (!empty($mailteachers) && !empty($teacher)) {
-            $a->course = format_string($course->fullname, true, array('context' => $coursecontext));
-            $a->user = fullname($user);
-
-            $eventdata = new \core\message\message();
-            $eventdata->component         = 'availability_paypal';
-            $eventdata->name              = 'payment_completed';
-            $eventdata->userfrom          = $user;
-            $eventdata->userto            = $teacher;
-            $eventdata->subject           = get_string("paypalpaymentcompletedsubject", 'paypal');
-            $eventdata->fullmessage       = get_string('paypalpaymentcompletedmessage', 'paypal');
-            $eventdata->fullmessageformat = FORMAT_PLAIN;
-            $eventdata->fullmessagehtml   = '';
-            $eventdata->smallmessage      = '';
-            message_send($eventdata);
-        }
-
-        if (!empty($mailadmins)) {
-            $a->course = format_string($course->fullname, true, array('context' => $coursecontext));
-            $a->user = fullname($user);
-            $admins = get_admins();
-            foreach ($admins as $admin) {
-                $eventdata = new \core\message\message();
-                $eventdata->component         = 'availability_paypal';
-                $eventdata->name              = 'payment_completed';
-                $eventdata->userfrom          = $user;
-                $eventdata->userto            = $admin;
-                $eventdata->subject           = get_string("paypalpaymentcompletedsubject", 'paypal');
-                $eventdata->fullmessage       = get_string('paypalpaymentcompletedmessage', 'paypal');
-                $eventdata->fullmessageformat = FORMAT_PLAIN;
-                $eventdata->fullmessagehtml   = '';
-                $eventdata->smallmessage      = '';
-                message_send($eventdata);
-            }
-        }
-        */
-
-    } else if (strcmp ($result, "INVALID") == 0) { // ERROR.
-        $DB->insert_record("availability_paypal_tnx", $data, false);
-        availability_paypal_message_error_to_admin("Received an invalid payment notification!! (Fake payment?)", $data);
-    }
+else
+{
+	try
+	{
+		$client = new SoapClient('https://de.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
+		//$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
+		$parameters = array(
+				'MerchantID' => '91478b34-1b50-11e6-8c74-000c295eb8fc',
+				'Authority'  => $_GET['Authority'],
+				'Amount'     => $_GET['amount']
+			);
+		$req = $client->PaymentVerification($parameters);
+		if($req->Status == 100)
+		{
+			$result = true;
+			$err = 'پرداخت با موفقیت انجام شد.<br />شماره پیگیری : '.$_GET['Authority'];
+		}
+		else
+		{
+			$err = 'Transation failed. Status:'. $req->Status .'<br /> نتیجه استعلام پرداخت شما معتبر نیست.';
+		}
+	}
+	catch (SoapFault $ex)
+	{
+		$err = 'Soap.Error: '.$ex->getMessage();
+	}
 }
+/*
+if ($result === true)
+{
+	$DB->insert_record("availability_paypal_tnx", $data);/*
+  if ($existing = $DB->get_record("availability_paypal_tnx", array("txn_id" => $data->txn_id))) {
+		availability_paypal_message_error_to_admin("Transaction $data->txn_id is being repeated!", $data);
+		die;
+  }*/
+  if (!$user = $DB->get_record('user', array('id' => $data->userid))) {
+		availability_paypal_message_error_to_admin("User {$data->userid} doesn't exist", $data);
+		die;
+  }
+  // Check that course exists.
+  if (!$course = $DB->get_record('course', array('id' => $data->courseid))) {
+		availability_paypal_message_error_to_admin("Course {$data->courseid} doesn't exist", $data);
+		die;
+  }
+  $coursecontext = context_course::instance($course->id, IGNORE_MISSING);
+
+  // Check that amount paid is the correct amount.
+  if ( (float) $paypal->cost < 0 ) {
+		$cost = (float) 0;
+  } else {
+		$cost = (float) $paypal->cost;
+  }
+
+  // Use the same rounding of floats as on the plugin form.
+  $cost = format_float($cost, 2, false);
+
+  if ($data->payment_gross < $cost) {
+		availability_paypal_message_error_to_admin("Amount paid is not enough ({$data->payment_gross} < {$cost}))", $data);
+		die;
+  }
+  // All clear!
+
+  // Pass $view=true to filter hidden caps if the user cannot see them.
+  if ($users = get_users_by_capability($context, 'moodle/course:update', 'u.*', 'u.id ASC', '', '', '', '', false, true))
+  {
+		$users = sort_by_roleassignment_authority($users, $context);
+		$teacher = array_shift($users);
+  }
+  else
+  {
+		$teacher = false;
+  }
+}
+*/
+
+header("location: {$CFG->wwwroot}/availability/condition/paypal/view.php?contextid=".$data->contextid);
 
 function availability_paypal_message_error_to_admin($subject, $data) {
     $admin = get_admin();

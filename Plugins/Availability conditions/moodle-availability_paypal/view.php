@@ -87,7 +87,7 @@ if ($paymenttnx && ($paymenttnx->payment_status == 'Pending')) {
         }
         echo '<div class="mdl-align"><p>'.get_string('paymentrequired', 'availability_paypal').'</p>';
         echo '<div class="mdl-align"><p>'.get_string('paymentwaitremider', 'availability_paypal').'</p>';
-        echo '<p><b>'.get_string('cost').": $instance->currency $localisedcost".'</b></p>';
+        echo '<p><b>'.get_string('cost').": $localisedcost تومان ".'</b></p>';
         echo '<p><a href="'.$wwwroot.'/login/">'.get_string('loginsite').'</a></p>';
         echo '</div>';
     } else {
@@ -99,51 +99,49 @@ if ($paymenttnx && ($paymenttnx->payment_status == 'Pending')) {
         $usercity        = $USER->city;
 ?>
         <p><?php print_string("paymentrequired", 'availability_paypal') ?></p>
-        <p><b><?php echo get_string("cost").": {$paypal->currency} {$localisedcost}"; ?></b></p>
+        <p><b><?php echo get_string("cost").": {$localisedcost}"; ?> تومان </b></p>
         <p><img alt="<?php print_string('paypalaccepted', 'availability_paypal') ?>"
         title="<?php print_string('paypalaccepted', 'availability_paypal') ?>"
         src="https://www.paypal.com/en_US/i/logo/PayPal_mark_60x38.gif" /></p>
         <p><?php print_string("paymentinstant", 'availability_paypal') ?></p>
         <?php
-        if (empty($CFG->usepaypalsandbox)) {
-            $paypalurl = 'https://www.paypal.com/cgi-bin/webscr';
-        } else {
-            $paypalurl = 'https://www.sandbox.paypal.com/cgi-bin/webscr';
-        }
+			try
+			{
+				$amount = intval(ceil($paypal->cost));
+				date_default_timezone_set("Asia/Tehran");
+				$client = new SoapClient('https://de.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
+				//$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
+				$parameters = array(
+						'MerchantID'  => '91478b34-1b50-11e6-8c74-000c295eb8fc',
+						'Amount'      => $amount,
+						'Description' => ($paypal->itemname?:$userfirstname.' '.$userlastname),
+						'Email'       => $USER->email,
+						'Mobile'      => '',
+						'CallbackURL' => "$CFG->wwwroot/availability/condition/paypal/ipn.php?custom={$USER->id}-{$contextid}&user=$userfullname&amount=".$amount
+					);
+					
+				$result = $client->PaymentRequest($parameters);
+				if($result->Status == 100)
+				{
+					$url = 'https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority;
+					$url = 'https://www.zarinpal.com/pg/StartPay/'.$result->Authority;
+					?>
+					<form action="<?php echo $url ?>" method="get">
+					<input type="hidden" name="return" value="<?php echo "" ?>" />
+					<input type="submit" value="<?php print_string("sendpaymentbutton", "availability_paypal") ?>" />
+					</form>
+					<?php
+				}
+				else
+				{
+					echo ('ZarinPal.Error : '.$result->Status);
+				}
+			}
+			catch (SoapFault $ex)
+			{
+				echo('Soap.Error : '.$ex->getMessage());
+			}
         ?>
-        <form action="<?php echo $paypalurl ?>" method="post">
-
-            <input type="hidden" name="cmd" value="_xclick" />
-            <input type="hidden" name="charset" value="utf-8" />
-            <input type="hidden" name="business" value="<?php p($paypal->businessemail)?>" />
-            <input type="hidden" name="item_name" value="<?php p($paypal->itemname) ?>" />
-            <input type="hidden" name="item_number" value="<?php p($paypal->itemnumber) ?>" />
-            <input type="hidden" name="quantity" value="1" />
-            <input type="hidden" name="on0" value="<?php print_string("user") ?>" />
-            <input type="hidden" name="os0" value="<?php p($userfullname) ?>" />
-            <input type="hidden" name="custom" value="<?php echo "{$USER->id}-{$contextid}" ?>" />
-
-            <input type="hidden" name="currency_code" value="<?php p($paypal->currency) ?>" />
-            <input type="hidden" name="amount" value="<?php p($cost) ?>" />
-
-            <input type="hidden" name="for_auction" value="false" />
-            <input type="hidden" name="no_note" value="1" />
-            <input type="hidden" name="no_shipping" value="1" />
-            <input type="hidden" name="notify_url" value="<?php echo "{$CFG->wwwroot}/availability/condition/paypal/ipn.php" ?>" />
-            <input type="hidden" name="return" value="<?php echo "{$CFG->wwwroot}/availability/condition/paypal/view.php?contextid={$contextid}" ?>" />
-            <input type="hidden" name="cancel_return" value="<?php echo "{$CFG->wwwroot}/availability/condition/paypal/view.php?contextid={$contextid}" ?>" />
-            <input type="hidden" name="rm" value="2" />
-            <input type="hidden" name="cbt" value="<?php print_string("continue", 'availability_paypal') ?>" />
-
-            <input type="hidden" name="first_name" value="<?php p($userfirstname) ?>" />
-            <input type="hidden" name="last_name" value="<?php p($userlastname) ?>" />
-            <input type="hidden" name="address" value="<?php p($useraddress) ?>" />
-            <input type="hidden" name="city" value="<?php p($usercity) ?>" />
-            <input type="hidden" name="email" value="<?php p($USER->email) ?>" />
-            <input type="hidden" name="country" value="<?php p($USER->country) ?>" />
-
-            <input type="submit" value="<?php print_string("sendpaymentbutton", "availability_paypal") ?>" />
-        </form>
 <?php
     }
 }

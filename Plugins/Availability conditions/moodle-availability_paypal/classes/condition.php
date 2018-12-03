@@ -101,7 +101,7 @@ class condition extends \core_availability\condition {
         $allow = $DB->record_exists('availability_paypal_tnx',
                                   array('userid' => $userid,
                                         'contextid' => $context->id,
-                                        'payment_status' => 'Completed'));
+                                        'payment_status' => 'OK'));
         if ($not) {
             $allow = !$allow;
         }

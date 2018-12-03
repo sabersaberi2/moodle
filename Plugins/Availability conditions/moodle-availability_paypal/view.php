@@ -54,7 +54,7 @@ require_login($course);
 
 if ($paymenttnx = $DB->get_record('availability_paypal_tnx', array('userid' => $USER->id, 'contextid' => $contextid))) {
 
-    if ($paymenttnx->payment_status == 'Completed') {
+    if ($paymenttnx->payment_status == 'OK') {
         redirect($context->get_url(), get_string('paymentcompleted', 'availability_paypal'));
     }
 }
@@ -75,7 +75,7 @@ if ($paymenttnx && ($paymenttnx->payment_status == 'Pending')) {
 
     // Calculate localised and "." cost, make sure we send PayPal the same value,
     // please note PayPal expects amount with 2 decimal places and "." separator.
-    $localisedcost = format_float($paypal->cost, 2, true);
+    $localisedcost = format_float($paypal->cost, 0, true);
     $cost = format_float($paypal->cost, 2, false);
 
     if (isguestuser()) { // Force login only for guest user, not real users with guest role.
@@ -100,16 +100,18 @@ if ($paymenttnx && ($paymenttnx->payment_status == 'Pending')) {
 ?>
         <p><?php print_string("paymentrequired", 'availability_paypal') ?></p>
         <p><b><?php echo get_string("cost").": {$localisedcost}"; ?> تومان </b></p>
-        <p><img alt="<?php print_string('paypalaccepted', 'availability_paypal') ?>"
-        title="<?php print_string('paypalaccepted', 'availability_paypal') ?>"
-        src="https://www.paypal.com/en_US/i/logo/PayPal_mark_60x38.gif" /></p>
+        <p><b><?php echo 'کاربر ' . $userlastname . '، شما ';
+               print_string('paypalaccepted', 'availability_paypal'); ?></b></p>
+        <!-- <p><img alt="<?php $userlastname . ' عزیز ' . print_string('paypalaccepted', 'availability_paypal') ?>"
+        title="<?php $userlastname . ' عزیز ' . print_string('paypalaccepted', 'availability_paypal') ?>"
+        src="https://www.paypal.com/en_US/i/logo/PayPal_mark_60x38.gif" /></p> -->
         <p><?php print_string("paymentinstant", 'availability_paypal') ?></p>
         <?php
 			try
 			{
 				$amount = intval(ceil($paypal->cost));
 				date_default_timezone_set("Asia/Tehran");
-				$client = new SoapClient('https://de.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
+				$client = new SoapClient('https://zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
 				//$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
 				$parameters = array(
 						'MerchantID'  => '91478b34-1b50-11e6-8c74-000c295eb8fc',
@@ -117,9 +119,8 @@ if ($paymenttnx && ($paymenttnx->payment_status == 'Pending')) {
 						'Description' => ($paypal->itemname?:$userfirstname.' '.$userlastname),
 						'Email'       => $USER->email,
 						'Mobile'      => '',
-						'CallbackURL' => "$CFG->wwwroot/availability/condition/paypal/ipn.php?custom={$USER->id}-{$contextid}&user=$userfullname&amount=".$amount
+						'CallbackURL' => "$CFG->wwwroot/availability/condition/paypal/ipn.php?custom={$USER->id}-{$contextid}-{$coursecontext->instanceid}&user=$userfullname&amount=".$amount
 					);
-					
 				$result = $client->PaymentRequest($parameters);
 				if($result->Status == 100)
 				{
@@ -142,6 +143,7 @@ if ($paymenttnx && ($paymenttnx->payment_status == 'Pending')) {
 				echo('Soap.Error : '.$ex->getMessage());
 			}
         ?>
+        <p style="color: red;"><?php print_string("paymentnotice", 'availability_paypal') ?></p>
 <?php
     }
 }

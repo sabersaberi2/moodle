@@ -1,7 +1,7 @@
-• اضافه کردن پلاگین simplecertificate نسخه v2.2.8 برای Moodle
+• اضافه کردن پلاگین Activities : simplecertificate نسخه v2.2.8(2018082000) برای Moodle 3.5
 __________________
 __________________
-• به روز رسانی پلاگین simplecertificate نسخه v2.2.8 به نسخه شخصی شده v2.2.8-A
+• به روز رسانی پلاگین Activities : simplecertificate نسخه v2.2.8(2018082000) به نسخه شخصی شده v2.2.8(2018082000)-A
 
   A :
   غیرفعال کردن صدور گواهی نامه زمانی که گواهی نامه ای برای دریافت کد گواهی نامه وجود ندارد
@@ -11,20 +11,73 @@ __________________
       این حالت غیرفعال شد تا صدور گواهی نامه منوط به کلیک کردن کاربر بر روی دکمه صدور گواهی نامه باشد.
 __________________
 __________________
-• اضافه کردن پلاگین moodle-availability_paypal نسخه v4(2016100600) برای Moodle
+• اضافه کردن پلاگین Availability conditions : paypal نسخه v4(2016100600) برای Moodle
 __________________
 __________________
-• به روز رسانی پلاگین moodle-availability_paypal نسخه v4(2016100600) به نسخه شخصی شده v4(2016100600)-A
+• به روز رسانی پلاگین Availability conditions : paypal نسخه v4(2016100600) به نسخه شخصی شده v4(2016100600)-A
 
   A :
   تعویض Paypal با ZarinPal و قرار دادن واحد پولی تومان
 __________________
 __________________
-• به روز رسانی پلاگین moodle-availability_paypal نسخه شخصی v4(2016100600)-A به نسخه شخصی شده v4(2016100600)-B
+• به روز رسانی پلاگین Availability conditions : paypal نسخه شخصی v4(2016100600)-A به نسخه شخصی شده v4(2016100600)-B
 
   B :
     - بهبود عملکرد اتصال به زرین پال
     - بهبود ترجمه فارسی
     - رفع مشکل condition
+__________________
+__________________
+• اضافه کردن فایل mod\quiz\processattempt.php نسخه Moodle 3.6.1 برای شخصی سازی
+
+• اضافه کردن فونت‌های زیر، واقع در آدرس lib\tcpdf\fonts برای شخصی سازی
+  freeserif.ctg.z
+  freeserif.php
+  freeserif.z
+
+• اضافه کردن پلاگین Themes : essential نسخه v3.3.1.1 (2017040305) برای Moodle 3.3
+
+• شخصی سازی تصاویر پلاگین Course formats : grid نسخه v3.6.0.1(2018121900) در پلاگین Themes : essential
+    - بازنشانی (Overriding) تصاویر :
+      course\format\grid\pix\close.png
+      course\format\grid\pix\new_activity_en.png
+      با تصاویر جدید :
+      theme\essential\pix_plugins\course\format\grid\close.png
+      theme\essential\pix_plugins\course\format\grid\new_activity_en.png
+
+• شخصی سازی تصاویر پلاگین Course formats : topcoll نسخه v3.6.0.1(2018121900) در پلاگین Themes : essential
+    - بازنشانی (Overriding) تصاویر :
+      course\format\topcoll\pix\arrow_down.png
+      course\format\topcoll\pix\arrow_right.png
+      course\format\topcoll\pix\arrow_right_glow.png
+      با تصاویر جدید :
+      theme\essential\pix_plugins\course\format\topcoll\arrow_down.png
+      theme\essential\pix_plugins\course\format\topcoll\arrow_right.png
+      theme\essential\pix_plugins\course\format\topcoll\arrow_right_glow.png
+
+• شخصی سازی تصاویر پلاگین‌های مودل در پلاگین Themes : essential
+  mod\assign\pix
+  mod\assignment\pix
+  mod\chat\pix
+  mod\feedback\pix
+  mod\folder\pix
+  mod\forum\pix
+  mod\hvp\pix
+  mod\quiz\pix
+  mod\url\pix
+    - بازنشانی (Overriding) تصاویر :
+      mod\[plugin name]\pix\icon.svg
+      mod\[plugin name]\pix\icon.png
+      با تصاویر جدید :
+      theme\essential\pix_plugins\mod\[plugin name]\icon.svg
+      theme\essential\pix_plugins\mod\[plugin name]\icon.png
+
+• شخصی سازی تصاویر هسته‌ی مودل در پلاگین Themes : essential
+    - بازنشانی (Overriding) تصاویر :
+      pix\f\mp3-[24,32,48,64,72,80,96,128,256].png
+      pix\f\mpeg-[24,32,48,64,72,80,96,128,256].png
+      با تصاویر جدید :
+      theme\essential\pix_core\f\mp3-[24,32,48,64,72,80,96,128,256].png
+      theme\essential\pix_core\f\mpeg-[24,32,48,64,72,80,96,128,256].png
 __________________
 __________________

@@ -81,3 +81,37 @@ __________________
       theme\essential\pix_core\f\mpeg-[24,32,48,64,72,80,96,128,256].png
 __________________
 __________________
+• شخصی سازی فایل mod\quiz\processattempt.php نسخه Moodle 3.6.1 به نسخه شخصی شده Moodle 3.6.1-A
+  - اضافه کردن قابلیت بررسی حالت پاسخ دادن کاربر به تمامی سوالات موجود در صفحه و فعال کردن دکمه رفتن به صفحه بعدی سوالات
+
+• شخصی سازی فونت‌های زیر، واقع در آدرس lib\tcpdf\fonts، با فونت I.R.A.N.S.a.n.s
+  freeserif.ctg.z
+  freeserif.php
+  freeserif.z
+
+• شخصی سازی پلاگین Themes : essential نسخه v3.3.1.1 (2017040305) برای Moodle 3.3 به نسخه شخصی شده v3.3.1.1(2017040305)-A برای Moodle 3.3
+  - اضافه کردن دکمه دانلود به videojs player
+    ● قرار دادن فایل های زیر در پوشه theme\essential\javascript :
+        custom.js
+        video.min.js
+        videojs-download-button.min.js
+    ● الصاق کدهای زیر به انتهای فایل theme\essential\config.php :
+        /* Mahdi Agnelli { Add download button to videojs player */
+            $THEME->javascripts = array('video.min','videojs-download-button.min');
+            $THEME->javascripts_footer = array('custom');
+        /* } Mahdi Agnelli */
+    ● الصاق کدهای زیر به انتهای فایل theme\essential\style\custom.css :
+        /* Mahdi Agnelli { Add download button to videojs player */
+            /* Hide video-js UI Controls */
+            div.video-js > div.vjs-control-bar {
+                display: none !important;
+            }
+            /* Show videojs-download-button UI Controls */
+            div.vjs-tech > div.vjs-control-bar {
+                display: flex !important;
+            }
+            /* videojs download button CSS */
+            .video-js .vjs-download-button-control{width:14px;height:100%;margin:0 1em;background:url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMTQgMTMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDE0IDEzOyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PHN0eWxlIHR5cGU9InRleHQvY3NzIj4uc3Qwe2ZpbGw6I2ZmZmZmZjt9PC9zdHlsZT48cG9seWdvbiBjbGFzcz0ic3QwIiBwb2ludHM9IjEyLDkgMTIsMTEgMiwxMSAyLDkgMCw5IDAsMTMgMTQsMTMgMTQsOSAiLz48cG9seWdvbiBjbGFzcz0ic3QwIiBwb2ludHM9IjEwLDMuNiA4LDUuNiA4LDAgNiwwIDYsNS42IDQsMy42IDIuNiw1IDcsOS40IDExLjQsNSAiLz48L3N2Zz4=) 0 50% no-repeat}
+        /* } Mahdi Agnelli */
+__________________
+__________________

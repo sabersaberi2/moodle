@@ -199,3 +199,8 @@ $THEME->rendererfactory = 'theme_overridden_renderer_factory';
 $THEME->csspostprocess = 'theme_essential_process_css';
 
 $THEME->iconsystem = '\\theme_essential\\output\\icon_system_fontawesome';
+
+/* Mahdi Agnelli { Add download button to videojs player */
+    $THEME->javascripts = array('video.min','videojs-download-button.min');
+    $THEME->javascripts_footer = array('custom');
+/* } Mahdi Agnelli */

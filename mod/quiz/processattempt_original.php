@@ -48,6 +48,23 @@ $cmid          = optional_param('cmid', null, PARAM_INT);
 
 $attemptobj = quiz_create_attempt_handling_errors($attemptid, $cmid);
 
+// Set $nexturl now.
+if ($next) {
+    $page = $nextpage;
+} else if ($previous && $thispage > 0) {
+    $page = $thispage - 1;
+} else {
+    $page = $thispage;
+}
+if ($page == -1) {
+    $nexturl = $attemptobj->summary_url();
+} else {
+    $nexturl = $attemptobj->attempt_url(null, $page);
+    if ($scrollpos !== '') {
+        $nexturl->param('scrollpos', $scrollpos);
+    }
+}
+
 // Check login.
 require_login($attemptobj->get_course(), false, $attemptobj->get_cm());
 require_sesskey();
@@ -70,52 +87,6 @@ if ($attemptobj->is_finished()) {
 
 // Process the attempt, getting the new status for the attempt.
 $status = $attemptobj->process_attempt($timenow, $finishattempt, $timeup, $thispage);
-
-// mahdi agnelli { Check all questions in this page MUST be completed
-    $quizIDs_MustCompleteAnswered = Array ("1360");
-    if (in_array($attemptobj->get_cmid(), $quizIDs_MustCompleteAnswered)) {
-        // V2
-        $questionids = $attemptobj->get_slots($thispage);
-        $questions = array();
-        $questions_state = array();
-        foreach ($questionids as $key => $id) {
-            $questions[$key] = $attemptobj->get_question_attempt($id);
-            $questions_state[$key] = $attemptobj->get_question_state($id);
-            if ($questions_state[$key] != question_state::$complete) {
-                $next = false;
-                break;
-            }
-        }
-
-        /*
-        // V1
-        $quba=question_engine::load_questions_usage_by_activity($attemptobj->get_uniqueid());
-        $answered = 0;
-        foreach ($quba->get_attempt_iterator() as $qa) {
-            if ($qa->get_state() == question_state::$complete) {
-                $answered += 1;
-            }
-        }
-        */
-    }
-// } mahdi agnelli
-
-// Set $nexturl now.
-if ($next) {
-    $page = $nextpage;
-} else if ($previous && $thispage > 0) {
-    $page = $thispage - 1;
-} else {
-    $page = $thispage;
-}
-if ($page == -1) {
-    $nexturl = $attemptobj->summary_url();
-} else {
-    $nexturl = $attemptobj->attempt_url(null, $page);
-    if ($scrollpos !== '') {
-        $nexturl->param('scrollpos', $scrollpos);
-    }
-}
 
 if ($status == quiz_attempt::OVERDUE) {
     redirect($attemptobj->summary_url());
